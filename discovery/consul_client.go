@@ -1,12 +1,12 @@
 package discovery
 
 import (
+	"strconv"
+
 	"github.com/hashicorp/consul/api"
 	"github.com/wanghongfei/gogate/conf"
 	. "github.com/wanghongfei/gogate/conf"
 	"github.com/wanghongfei/gogate/perr"
-	"strconv"
-	"strings"
 )
 
 type ConsulClient struct {
@@ -18,9 +18,8 @@ type ConsulClient struct {
 	// 保存服务地址
 	// key: 服务名:版本号, 版本号为eureka注册信息中的metadata[version]值
 	// val: []*InstanceInfo
-	registryMap 			*InsInfoArrSyncMap
+	registryMap *InsInfoArrSyncMap
 }
-
 
 func NewConsulClient() (Client, error) {
 	cfg := &api.Config{}
@@ -32,10 +31,10 @@ func NewConsulClient() (Client, error) {
 		return nil, perr.WrapSystemErrorf(err, "failed to init consule client")
 	}
 
-	consuleClient := &ConsulClient{client:c}
-	consuleClient.periodicalRefreshClient = newPeriodicalRefresh(consuleClient)
+	consulClient := &ConsulClient{client: c}
+	consulClient.periodicalRefreshClient = newPeriodicalRefresh(consulClient)
 
-	return consuleClient, nil
+	return consulClient, nil
 }
 
 func (c *ConsulClient) GetInternalRegistryStore() *InsInfoArrSyncMap {
@@ -55,7 +54,6 @@ func (c *ConsulClient) Get(serviceId string) []*InstanceInfo {
 	return instance
 }
 
-
 func (c *ConsulClient) QueryServices() ([]*InstanceInfo, error) {
 	servMap, err := c.client.Agent().Services()
 	if nil != err {
@@ -63,7 +61,7 @@ func (c *ConsulClient) QueryServices() ([]*InstanceInfo, error) {
 	}
 
 	// 查出所有健康实例
-	healthList, _, err := c.client.Health().State("passing", &api.QueryOptions{})
+	healthList, _, err := c.client.Health().State(api.HealthPassing, nil)
 	if nil != err {
 		return nil, perr.WrapSystemErrorf(err, "failed to query consul")
 	}
@@ -90,9 +88,9 @@ func (c *ConsulClient) QueryServices() ([]*InstanceInfo, error) {
 		instances = append(
 			instances,
 			&InstanceInfo{
-				ServiceName: strings.ToUpper(servInfo.Service),
-				Addr: servInfo.Address + ":" + strconv.Itoa(servInfo.Port),
-				Meta: servInfo.Meta,
+				ServiceName: servInfo.Service,
+				Addr:        servInfo.Address + ":" + strconv.Itoa(servInfo.Port),
+				Meta:        servInfo.Meta,
 			},
 		)
 	}

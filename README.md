@@ -2,6 +2,18 @@
 
 # GoGate
 
+## consul
+
+```bash
+
+# deregister service
+curl -X PUT http://localhost:8500/v1/agent/service/deregister/localhost:8080/api
+
+# get healthy services
+curl http://localhost:8500/v1/health/service/ssvc?passing
+
+```
+
 Go语言实现的Spring Cloud网关，目标是性能，即使用更少的资源达到更高的QPS。
 
 GoGate使用以高性能著称的`FastHttp`库收发HTTP请求，且会为每个host单独创建一个`HostClient`以减少锁竞争。

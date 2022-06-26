@@ -1,11 +1,12 @@
 package server
 
 import (
+	"strings"
+
 	. "github.com/wanghongfei/gogate/conf"
 	"github.com/wanghongfei/gogate/discovery"
 	"github.com/wanghongfei/gogate/perr"
 	"github.com/wanghongfei/gogate/server/route"
-	"strings"
 
 	"github.com/valyala/fasthttp"
 	"github.com/wanghongfei/gogate/utils"
@@ -32,7 +33,8 @@ func (serv *Server) sendRequest(ctx *fasthttp.RequestCtx, req *fasthttp.Request)
 		logRecordName = info.Id
 
 		// 获取Client
-		appId := strings.ToUpper(info.Id)
+		// appId := strings.ToUpper(info.Id)
+		appId := info.Id
 
 		// 灰度, 选择版本
 		version := chooseVersion(info.Canary)
