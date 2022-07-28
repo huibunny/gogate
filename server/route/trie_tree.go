@@ -12,9 +12,16 @@ func init() {
 	urlCharCount = len(urlCharArray)
 }
 
+type treeNode struct {
+	Char rune
+	Data *ServiceInfo
+
+	SubNodes []*treeNode
+}
+
 // 字典树
 type TrieTree struct {
-	root		*treeNode
+	root *treeNode
 }
 
 // 创建空字典树
@@ -67,7 +74,7 @@ func (tree *TrieTree) PutString(path string, data *ServiceInfo) {
 		if nil == subNode {
 			var newNode *treeNode
 			// 是最后一个字符
-			if ix == LEN - 1 {
+			if ix == LEN-1 {
 				newNode = newTreeNode(char, data)
 			} else {
 				newNode = newTreeNode(char, nil)
@@ -76,7 +83,7 @@ func (tree *TrieTree) PutString(path string, data *ServiceInfo) {
 			node.addSubNode(newNode)
 			node = newNode
 
-		} else if ix == LEN - 1 {
+		} else if ix == LEN-1 {
 			subNode.Data = data
 
 		} else {
@@ -94,17 +101,10 @@ func findNode(char rune, nodeList []*treeNode) *treeNode {
 	return nodeList[pos]
 }
 
-type treeNode struct {
-	Char		rune
-	Data		*ServiceInfo
-
-	SubNodes	[]*treeNode
-}
-
 func newTreeNode(char rune, data *ServiceInfo) *treeNode {
 	node := &treeNode{
-		Char: char,
-		Data: data,
+		Char:     char,
+		Data:     data,
 		SubNodes: nil,
 	}
 
@@ -133,4 +133,3 @@ func (node *treeNode) findSubNode(target rune) *treeNode {
 	pos := mapPosition(target)
 	return node.SubNodes[pos]
 }
-

@@ -9,62 +9,60 @@ import (
 )
 
 type GateConfig struct {
-	Version					string`yaml:"version"`
+	Version string `yaml:"version"`
 
-	ServerConfig			*ServerConfig`yaml:"server"`
-	RedisConfig				*RedisConfig`yaml:"redis"`
+	ServerConfig *ServerConfig `yaml:"server"`
+	RedisConfig  *RedisConfig  `yaml:"redis"`
 
-	EurekaConfig			*EurekaConfig`yaml:"eureka"`
-	ConsulConfig			*ConsulConfig`yaml:"consul"`
+	EurekaConfig *EurekaConfig `yaml:"eureka"`
+	ConsulConfig *ConsulConfig `yaml:"consul"`
 
-	Traffic					*TrafficConfig`yaml:"traffic"`
+	Traffic *TrafficConfig `yaml:"traffic"`
 
 	Log struct {
-		ConsoleOnly bool`yaml:"console-only"`
-		FilePattern string`yaml:"file-pattern"`
-		FileLink string`yaml:"file-link"`
-		Directory string`yaml:"directory"`
-	}`yaml:"log"`
+		ConsoleOnly bool   `yaml:"console-only"`
+		FilePattern string `yaml:"file-pattern"`
+		FileLink    string `yaml:"file-link"`
+		Directory   string `yaml:"directory"`
+	} `yaml:"log"`
 }
 
 type ServerConfig struct {
-	AppName			string`yaml:"appName"`
-	Host			string`yaml:"host"`
-	Port			int`yaml:"port"`
-	MaxConnection	int`yaml:"maxConnection"`
+	AppName       string `yaml:"appName"`
+	Host          string `yaml:"host"`
+	Port          int    `yaml:"port"`
+	MaxConnection int    `yaml:"maxConnection"`
 	// 请求超时时间, ms
-	Timeout			int`yaml:"timeout"`
-
+	Timeout int `yaml:"timeout"`
 }
 
 type EurekaConfig struct {
-	Enable					bool`yaml:"enable"`
-	ConfigFile				string`yaml:"configFile"`
-	RouteFile				string`yaml:"routeFile"`
-	EvictionDuration		uint`yaml:"evictionDuration"`
-	HeartbeatInterval		int`yaml:"heartbeatInterval"`
+	Enable            bool   `yaml:"enable"`
+	ConfigFile        string `yaml:"configFile"`
+	RouteFile         string `yaml:"routeFile"`
+	EvictionDuration  uint   `yaml:"evictionDuration"`
+	HeartbeatInterval int    `yaml:"heartbeatInterval"`
 }
 
 type ConsulConfig struct {
-	Enable					bool`yaml:"enable"`
-	Address					string`yaml:"address"`
+	Enable  bool   `yaml:"enable"`
+	Address string `yaml:"address"`
 }
 
 type TrafficConfig struct {
-	EnableTrafficRecord		bool`yaml:"enableTrafficRecord"`
-	TrafficLogDir			string`yaml:"trafficLogDir"`
-
+	EnableTrafficRecord bool   `yaml:"enableTrafficRecord"`
+	TrafficLogDir       string `yaml:"trafficLogDir"`
 }
 
 type RedisConfig struct {
-	Enabled			bool
-	Addr			string
-	RateLimiterLua	string`yaml:"rateLimiterLua"`
+	Enabled        bool
+	Addr           string
+	RateLimiterLua string `yaml:"rateLimiterLua"`
 }
 
 var App *GateConfig
 
-func LoadConfig(filename string) {
+func LoadConfig(filename string) *GateConfig {
 	f, err := os.Open(filename)
 	if nil != err {
 		Log.Error(err)
@@ -81,14 +79,16 @@ func LoadConfig(filename string) {
 		panic(err)
 	}
 
-	validateGogateConfig(config)
+	// validateGogateConfig(config)
+
+	return config
 }
 
 func InitLog() {
 	initRotateLog()
 }
 
-func validateGogateConfig(config *GateConfig) error {
+func ValidateGogateConfig(config *GateConfig) error {
 	if nil == config {
 		return errors.New("config is nil")
 	}
@@ -123,7 +123,6 @@ func validateGogateConfig(config *GateConfig) error {
 		servCfg.Timeout = 3000
 	}
 
-
 	trafficCfg := config.Traffic
 	if trafficCfg.EnableTrafficRecord {
 		if trafficCfg.TrafficLogDir == "" {
@@ -142,4 +141,3 @@ func validateGogateConfig(config *GateConfig) error {
 
 	return nil
 }
-
