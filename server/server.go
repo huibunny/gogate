@@ -1,6 +1,7 @@
 package server
 
 import (
+	"net"
 	"os"
 	"time"
 
@@ -30,6 +31,8 @@ type Server struct {
 	//maxWait 				time.Duration
 	//wg      				*sync.WaitGroup
 
+	// for health check
+	checkApi string
 	// URI路由组件
 	Router *route.Router
 
@@ -79,6 +82,8 @@ func NewGatewayServer(cfg *conf.GateConfig, configFile, listenAddr string) (*Ser
 
 		lb: &lb.RoundRobinLoadBalancer{},
 
+		checkApi: cfg.ConsulConfig.CheckApi,
+
 		Router: router,
 
 		preFilters:  make([]*PreFilter, 0, 3),
@@ -125,10 +130,10 @@ func (serv *Server) Start(cfg *conf.GateConfig, consulClient *api.Client) error 
 	serv.isStarted = true
 
 	// 监听端口
-	// listen, err := net.Listen("tcp", serv.listenAddr)
-	// if nil != err {
-	// 	return perr.WrapSystemErrorf(nil, "failed to listen at %s => %w", serv.listenAddr, err)
-	// }
+	listen, err := net.Listen("tcp", serv.listenAddr)
+	if nil != err {
+		return perr.WrapSystemErrorf(nil, "failed to listen at %s => %w", serv.listenAddr, err)
+	}
 
 	// 是否启用优雅关闭功能
 	//if serv.graceShutdown {
@@ -151,25 +156,25 @@ func (serv *Server) Start(cfg *conf.GateConfig, consulClient *api.Client) error 
 	}
 
 	// 启动注册表定时更新
-	err := serv.discoveryClient.StartPeriodicalRefresh()
+	err = serv.discoveryClient.StartPeriodicalRefresh()
 	if nil != err {
 		return perr.WrapSystemErrorf(err, "failed to start discovery module")
 	}
-	// the corresponding fasthttp code
-	m := func(ctx *fasthttp.RequestCtx) {
-		switch string(ctx.Path()) {
-		case "/healthz":
-			func(ctx *fasthttp.RequestCtx) {
-				conf.Log.Info("receive health check: ", ctx.Request.URI().String(), ".")
-			}(ctx)
-		default:
-			ctx.Error("not found", fasthttp.StatusNotFound)
-		}
-	}
 
+	// the corresponding fasthttp code
+	// serv.fastServ.Handler = func(ctx *fasthttp.RequestCtx) {
+	// 	switch string(ctx.Path()) {
+	// 	case "/healthz":
+	// 		func(ctx *fasthttp.RequestCtx) {
+	// 			conf.Log.Info("receive health check: ", ctx.Request.URI().String(), ".")
+	// 		}(ctx)
+	// 	default:
+	// 		ctx.Error("not found", fasthttp.StatusNotFound)
+	// 	}
+	// }
 	// 启动http server
 	conf.Log.Infof("start Gogate at %s, pid: %d", serv.listenAddr, os.Getpid())
-	return fasthttp.ListenAndServe(serv.listenAddr, m)
+	return serv.fastServ.Serve(listen)
 }
 
 // 关闭server
