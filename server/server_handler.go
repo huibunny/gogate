@@ -1,12 +1,13 @@
 package server
 
 import (
+	"runtime"
+	"strconv"
+
 	"github.com/valyala/fasthttp"
 	. "github.com/wanghongfei/gogate/conf"
 	"github.com/wanghongfei/gogate/perr"
 	"github.com/wanghongfei/gogate/utils"
-	"runtime"
-	"strconv"
 )
 
 const (
@@ -27,7 +28,6 @@ func (serv *Server) HandleRequest(ctx *fasthttp.RequestCtx) {
 	sw := utils.NewStopwatch()
 	ctx.SetUserValue(STOPWATCH, sw)
 
-
 	// 取出请求path
 	path := string(ctx.Path())
 	ctx.SetUserValue(REQUEST_PATH, path)
@@ -39,18 +39,18 @@ func (serv *Server) HandleRequest(ctx *fasthttp.RequestCtx) {
 	Log.Infof("request %d received, method = %s, path = %s, body = %s", reqId, string(ctx.Method()), path, string(ctx.Request.Body()))
 
 	// 处理reload请求
-	if path == RELOAD_PATH {
-		err := serv.ReloadRoute()
-		if nil != err {
-			Log.Error(err)
-			NewResponse(path, err.Error()).Send(ctx)
-			return
-		}
+	// if path == RELOAD_PATH {
+	// 	err := serv.ReloadRoute(cfg)
+	// 	if nil != err {
+	// 		Log.Error(err)
+	// 		NewResponse(path, err.Error()).Send(ctx)
+	// 		return
+	// 	}
 
-		// ctx.WriteString(serv.ExtractRoute())
-		ctx.WriteString("ok")
-		return
-	}
+	// 	// ctx.WriteString(serv.ExtractRoute())
+	// 	ctx.WriteString("ok")
+	// 	return
+	// }
 
 	newReq := new(fasthttp.Request)
 	ctx.Request.CopyTo(newReq)
@@ -90,7 +90,6 @@ func (serv *Server) HandleRequest(ctx *fasthttp.RequestCtx) {
 		return
 	}
 	serv.recordTraffic(logRecordName, true)
-
 
 	// 调用Post过虑器
 	ok = invokePostFilters(serv, newReq, resp)
@@ -157,4 +156,3 @@ func recoverPanic(ctx *fasthttp.RequestCtx, serv *Server) {
 		processPanic(ctx, serv)
 	}
 }
-

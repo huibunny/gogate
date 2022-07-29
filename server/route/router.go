@@ -1,40 +1,24 @@
 package route
 
 import (
-	"github.com/wanghongfei/gogate/perr"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
+
+	"github.com/wanghongfei/gogate/conf"
+	"github.com/wanghongfei/gogate/perr"
+	"gopkg.in/yaml.v2"
 )
 
 type Router struct {
 	// 配置文件路径
-	cfgPath			string
+	cfgPath string
 
-	// path(string) -> *ServiceInfo
-	pathMatcher		*PathMatcher
+	cfg *conf.GateConfig
 
-	ServInfos		[]*ServiceInfo
-}
+	// path(string) -> *conf.ServiceInfo
+	pathMatcher *PathMatcher
 
-type ServiceInfo struct {
-	Id				string
-	Prefix			string
-	Host			string
-	Name			string
-	StripPrefix		bool`yaml:"strip-prefix"`
-	Qps				int
-
-	Canary			[]*CanaryInfo
-}
-
-type CanaryInfo struct {
-	Meta		string
-	Weight		int
-}
-
-func (info *ServiceInfo) String() string {
-	return "prefix = " + info.Prefix + ", id = " + info.Id + ", host = " + info.Host
+	ServInfos []*conf.ServiceInfo
 }
 
 /*
@@ -43,26 +27,26 @@ func (info *ServiceInfo) String() string {
 * PARAMS:
 *	- path: 路由配置文件路径
 *
-*/
-func NewRouter(path string) (*Router, error) {
-	matcher, servInfos, err := loadRoute(path)
+ */
+func NewRouter(cfg *conf.GateConfig, configFile string) (*Router, error) {
+	matcher, servInfos, err := loadRoute(cfg, configFile)
 	if nil != err {
 		return nil, perr.WrapSystemErrorf(err, "failed to load route info")
 	}
 
-
 	return &Router{
 		pathMatcher: matcher,
-		cfgPath: path,
-		ServInfos: servInfos,
+		cfg:         cfg,
+		cfgPath:     configFile,
+		ServInfos:   servInfos,
 	}, nil
 }
 
 /*
 * 重新加载路由器
-*/
+ */
 func (r *Router) ReloadRoute() error {
-	matcher, servInfos, err := loadRoute(r.cfgPath)
+	matcher, servInfos, err := loadRoute(r.cfg, r.cfgPath)
 	if nil != err {
 		return perr.WrapSystemErrorf(err, "failed to load route info")
 	}
@@ -77,73 +61,84 @@ func (r *Router) ReloadRoute() error {
 * 根据uri选择一个最匹配的appId
 *
 * RETURNS:
-*	返回最匹配的ServiceInfo
-*/
-func (r *Router) Match(reqPath string) *ServiceInfo {
+*	返回最匹配的conf.ServiceInfo
+ */
+func (r *Router) Match(reqPath string) *conf.ServiceInfo {
 
 	return r.pathMatcher.Match(reqPath)
 }
 
-func loadRoute(path string) (*PathMatcher, []*ServiceInfo, error) {
-	// 打开配置文件
-	routeFile, err := os.Open(path)
-	if nil != err {
-		return nil, nil, perr.WrapSystemErrorf(err, "failed to open file")
-	}
-	defer routeFile.Close()
-
-	// 读取
-	buf, err := ioutil.ReadAll(routeFile)
-	if nil != err {
-		return nil, nil, err
-	}
-
-	// 解析yml
-	// ymlMap := make(map[string]*ServiceInfo)
-	ymlMap := make(map[string]map[string]*ServiceInfo)
-	err = yaml.UnmarshalStrict(buf, &ymlMap)
-	if nil != err {
-		return nil, nil, err
-	}
-
-	servInfos := make([]*ServiceInfo, 0, 10)
-
+func loadRoute(cfg *conf.GateConfig, path string) (*PathMatcher, []*conf.ServiceInfo, error) {
+	servInfos := make([]*conf.ServiceInfo, 0, 10)
 	// 构造 path->serviceId 映射
 	// 保存到字典树中
 	tree := NewTrieTree()
 	// 保存到map中
-	routeMap := make(map[string]*ServiceInfo)
-	for name, info := range ymlMap["services"] {
-		// 验证
-		err = validateServiceInfo(info)
+	routeMap := make(map[string]*conf.ServiceInfo)
+	if len(path) > 0 {
+		// 打开配置文件
+		routeFile, err := os.Open(path)
 		if nil != err {
-			return nil, nil, perr.WrapSystemErrorf(err, "invalid config for %s", name)
+			return nil, nil, perr.WrapSystemErrorf(err, "failed to open file")
+		}
+		defer routeFile.Close()
+
+		// 读取
+		buf, err := ioutil.ReadAll(routeFile)
+		if nil != err {
+			return nil, nil, err
 		}
 
-		tree.PutString(info.Prefix, info)
-		routeMap[info.Prefix] = info
+		// 解析yml
+		// ymlMap := make(map[string]*conf.ServiceInfo)
+		ymlMap := make(map[string]map[string]*conf.ServiceInfo)
+		err = yaml.UnmarshalStrict(buf, &ymlMap)
+		if nil != err {
+			return nil, nil, err
+		}
+		for name, info := range ymlMap["services"] {
+			// 验证
+			err = validateServiceInfo(info)
+			if nil != err {
+				return nil, nil, perr.WrapSystemErrorf(err, "invalid config for %s", name)
+			}
 
-		servInfos = append(servInfos, info)
+			tree.PutString(info.Prefix, info)
+			routeMap[info.Prefix] = info
+
+			servInfos = append(servInfos, info)
+		}
+	} else {
+		for _, info := range cfg.Router {
+			err := validateServiceInfo(info)
+			if nil != err {
+				return nil, nil, perr.WrapSystemErrorf(err, "invalid router config")
+			}
+
+			tree.PutString(info.Prefix, info)
+			routeMap[info.Prefix] = info
+
+			servInfos = append(servInfos, info)
+		}
 	}
 
-
 	matcher := &PathMatcher{
-		routeMap: routeMap,
+		routeMap:      routeMap,
 		routeTrieTree: tree,
 	}
 	return matcher, servInfos, nil
 }
 
-func validateServiceInfo(info *ServiceInfo) error {
+func validateServiceInfo(info *conf.ServiceInfo) error {
 	if nil == info {
 		return perr.WrapSystemErrorf(nil, "info is empty")
 	}
 
-	if "" == info.Id && "" == info.Host {
+	if len(info.Id) == 0 && len(info.Host) == 0 {
 		return perr.WrapSystemErrorf(nil, "id and host are both empty")
 	}
 
-	if "" == info.Prefix {
+	if len(info.Prefix) == 0 {
 		return perr.WrapSystemErrorf(nil, "path is empty")
 	}
 

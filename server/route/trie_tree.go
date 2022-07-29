@@ -1,5 +1,7 @@
 package route
 
+import "github.com/wanghongfei/gogate/conf"
+
 var charPosMap = make(map[rune]int)
 var urlCharCount int
 
@@ -14,7 +16,7 @@ func init() {
 
 type treeNode struct {
 	Char rune
-	Data *ServiceInfo
+	Data *conf.ServiceInfo
 
 	SubNodes []*treeNode
 }
@@ -33,7 +35,7 @@ func NewTrieTree() *TrieTree {
 
 // 查找path对应的服务信息
 // path: 请求路径
-func (tree *TrieTree) Search(path string) *ServiceInfo {
+func (tree *TrieTree) Search(path string) *conf.ServiceInfo {
 	node := tree.root
 	for _, char := range path {
 		node = node.findSubNode(char)
@@ -47,7 +49,7 @@ func (tree *TrieTree) Search(path string) *ServiceInfo {
 
 // 搜索路径上遇到的第一个字符串
 // path: 请求路径
-func (tree *TrieTree) SearchFirst(path string) *ServiceInfo {
+func (tree *TrieTree) SearchFirst(path string) *conf.ServiceInfo {
 	node := tree.root
 	for _, char := range path {
 		node = node.findSubNode(char)
@@ -64,7 +66,7 @@ func (tree *TrieTree) SearchFirst(path string) *ServiceInfo {
 }
 
 // 添加一条path->serviceInfo映射
-func (tree *TrieTree) PutString(path string, data *ServiceInfo) {
+func (tree *TrieTree) PutString(path string, data *conf.ServiceInfo) {
 	pathRunes := []rune(path)
 	LEN := len(pathRunes)
 
@@ -101,7 +103,7 @@ func findNode(char rune, nodeList []*treeNode) *treeNode {
 	return nodeList[pos]
 }
 
-func newTreeNode(char rune, data *ServiceInfo) *treeNode {
+func newTreeNode(char rune, data *conf.ServiceInfo) *treeNode {
 	node := &treeNode{
 		Char:     char,
 		Data:     data,

@@ -1,28 +1,26 @@
 package server
 
 import (
+	"os"
+	"time"
+
+	"github.com/hashicorp/consul/api"
 	"github.com/valyala/fasthttp"
 	"github.com/wanghongfei/gogate/conf"
-	. "github.com/wanghongfei/gogate/conf"
 	"github.com/wanghongfei/gogate/discovery"
 	"github.com/wanghongfei/gogate/perr"
 	"github.com/wanghongfei/gogate/redis"
 	"github.com/wanghongfei/gogate/server/lb"
 	"github.com/wanghongfei/gogate/server/route"
-	"github.com/wanghongfei/gogate/server/statistics"
+	stat "github.com/wanghongfei/gogate/server/statistics"
 	"github.com/wanghongfei/gogate/throttle"
-	"net"
-	"os"
-	"strconv"
-	"time"
 )
 
 type Server struct {
-	host 					string
-	port 					int
+	listenAddr string
 
 	// 负载均衡组件
-	lb						lb.LoadBalancer
+	lb lb.LoadBalancer
 
 	//// 保存listener引用, 用于关闭server
 	//listen 					net.Listener
@@ -33,24 +31,24 @@ type Server struct {
 	//wg      				*sync.WaitGroup
 
 	// URI路由组件
-	Router 					*route.Router
+	Router *route.Router
 
 	// 过滤器
-	preFilters  			[]*PreFilter
-	postFilters 			[]*PostFilter
+	preFilters  []*PreFilter
+	postFilters []*PostFilter
 
 	// fasthttp对象
-	fastServ 				*fasthttp.Server
-	fastClient				*fasthttp.Client
+	fastServ   *fasthttp.Server
+	fastClient *fasthttp.Client
 
-	isStarted 				bool
+	isStarted bool
 
-	discoveryClient			discovery.Client
+	discoveryClient discovery.Client
 
 	// 服务id(string) -> 此服务的限速器对象(*MemoryRateLimiter)
-	rateLimiterMap 			*RateLimiterSyncMap
+	rateLimiterMap *RateLimiterSyncMap
 
-	trafficStat 			*stat.TraficStat
+	trafficStat *stat.TraficStat
 }
 
 const (
@@ -62,39 +60,26 @@ const (
 * 创建网关服务对象
 *
 * PARAMS:
-*	- host: 主机名(ip)
-*	- port: 端口
-*	- routePath: 路由配置文件路径
-*	- maxConn: 最大连接数, 0表示使用默认值
+*	- listenAddr: http监听地址, localhost:8080
 *
  */
-func NewGatewayServer(host string, port int, routePath string, maxConn int) (*Server, error) {
-	if "" == host {
-		return nil, perr.WrapSystemErrorf(nil, "invalid host %s", host)
+func NewGatewayServer(cfg *conf.GateConfig, configFile, listenAddr string) (*Server, error) {
+	maxConn := MAX_CONNECTION
+	if cfg.ServerConfig.MaxConnection > maxConn {
+		cfg.ServerConfig.MaxConnection = maxConn
 	}
-
-	if port <= 0 || port > 65535 {
-		return nil, perr.WrapSystemErrorf(nil, "invalid port %d", port)
-	}
-
-	if maxConn <= 0 {
-		maxConn = MAX_CONNECTION
-	}
-
-	// 创建router
-	router, err := route.NewRouter(routePath)
+	router, err := route.NewRouter(cfg, configFile)
 	if nil != err {
 		return nil, perr.WrapSystemErrorf(err, "failed to create router")
 	}
 
 	// 创建Server对象
 	serv := &Server{
-		host: host,
-		port: port,
+		listenAddr: listenAddr,
 
 		lb: &lb.RoundRobinLoadBalancer{},
 
-		Router:       router,
+		Router: router,
 
 		preFilters:  make([]*PreFilter, 0, 3),
 		postFilters: make([]*PostFilter, 0, 3),
@@ -113,13 +98,13 @@ func NewGatewayServer(host string, port int, routePath string, maxConn int) (*Se
 
 	// 创建http client
 	serv.fastClient = &fasthttp.Client{
-		MaxConnsPerHost:               maxConn,
-		ReadTimeout:                   time.Duration(conf.App.ServerConfig.Timeout) * time.Millisecond,
-		WriteTimeout:                  time.Duration(conf.App.ServerConfig.Timeout) * time.Millisecond,
+		MaxConnsPerHost: maxConn,
+		ReadTimeout:     time.Duration(cfg.ServerConfig.Timeout) * time.Millisecond,
+		WriteTimeout:    time.Duration(cfg.ServerConfig.Timeout) * time.Millisecond,
 	}
 
 	// 创建每个服务的限速器
-	serv.rebuildRateLimiter()
+	serv.rebuildRateLimiter(cfg)
 
 	// 注册过虑器
 	serv.AppendPreFilter(NewPreFilter("service-match-pre-filter", ServiceMatchPreFilter))
@@ -131,19 +116,19 @@ func NewGatewayServer(host string, port int, routePath string, maxConn int) (*Se
 }
 
 // 启动服务器
-func (serv *Server) Start() error {
-	if conf.App.Traffic.EnableTrafficRecord {
-		serv.trafficStat = stat.NewTrafficStat(1000, 1, stat.NewCsvFileTraficInfoStore(conf.App.Traffic.TrafficLogDir))
+func (serv *Server) Start(cfg *conf.GateConfig, consulClient *api.Client) error {
+	if cfg.Traffic.EnableTrafficRecord {
+		serv.trafficStat = stat.NewTrafficStat(1000, 1, stat.NewCsvFileTraficInfoStore(cfg.Traffic.TrafficLogDir))
 		serv.trafficStat.StartRecordTrafic()
 	}
 
 	serv.isStarted = true
 
 	// 监听端口
-	listen, err := net.Listen("tcp", serv.host + ":" + strconv.Itoa(serv.port))
-	if nil != err {
-		return perr.WrapSystemErrorf(nil, "failed to listen at %s:%d => %w", serv.host, serv.port, err)
-	}
+	// listen, err := net.Listen("tcp", serv.listenAddr)
+	// if nil != err {
+	// 	return perr.WrapSystemErrorf(nil, "failed to listen at %s => %w", serv.listenAddr, err)
+	// }
 
 	// 是否启用优雅关闭功能
 	//if serv.graceShutdown {
@@ -153,44 +138,38 @@ func (serv *Server) Start() error {
 	// 保存Listener指针
 	//serv.listen = listen
 
-	bothEnabled := conf.App.EurekaConfig.Enable && conf.App.ConsulConfig.Enable
-	if bothEnabled {
-		return perr.WrapSystemErrorf(nil, "eureka and consul are both enabled")
-	}
-
-	// 初始化服务注册模块
-	if conf.App.EurekaConfig.Enable {
-		Log.Info("eureka enabled")
-		serv.discoveryClient, err = discovery.NewEurekaClient(conf.App.EurekaConfig.ConfigFile)
+	// 初始化consul
+	if consulClient != nil {
+		var err error
+		serv.discoveryClient, err = discovery.NewConsulClient(consulClient)
 		if nil != err {
 			return err
 		}
-
-		// 注册自己, 启动心跳
-		// discovery.StartRegister()
-
-	} else if conf.App.ConsulConfig.Enable {
-		Log.Info("consul enabled")
-		// 初始化consul
-		serv.discoveryClient, err = discovery.NewConsulClient()
-		if nil != err {
-			return err
-		}
-
 	} else {
-		Log.Infof("no register center enabled, use static mode")
+		conf.Log.Infof("no register center enabled, use static mode")
 		serv.discoveryClient = discovery.DoNothingClient
 	}
 
 	// 启动注册表定时更新
-	err = serv.discoveryClient.StartPeriodicalRefresh()
+	err := serv.discoveryClient.StartPeriodicalRefresh()
 	if nil != err {
 		return perr.WrapSystemErrorf(err, "failed to start discovery module")
 	}
+	// the corresponding fasthttp code
+	m := func(ctx *fasthttp.RequestCtx) {
+		switch string(ctx.Path()) {
+		case "/healthz":
+			func(ctx *fasthttp.RequestCtx) {
+				conf.Log.Info("receive health check: ", ctx.Request.URI().String(), ".")
+			}(ctx)
+		default:
+			ctx.Error("not found", fasthttp.StatusNotFound)
+		}
+	}
 
 	// 启动http server
-	Log.Infof("start Gogate at %s:%d, pid: %d", serv.host, serv.port, os.Getpid())
-	return serv.fastServ.Serve(listen)
+	conf.Log.Infof("start Gogate at %s, pid: %d", serv.listenAddr, os.Getpid())
+	return fasthttp.ListenAndServe(serv.listenAddr, m)
 }
 
 // 关闭server
@@ -207,11 +186,11 @@ func (serv *Server) Shutdown() error {
 }
 
 // 更新路由配置文件
-func (serv *Server) ReloadRoute() error {
-	Log.Info("start reloading route info")
+func (serv *Server) ReloadRoute(cfg *conf.GateConfig) error {
+	conf.Log.Info("start reloading route info")
 	err := serv.Router.ReloadRoute()
-	serv.rebuildRateLimiter()
-	Log.Info("route info reloaded")
+	serv.rebuildRateLimiter(cfg)
+	conf.Log.Info("route info reloaded")
 
 	if nil != err {
 		return perr.WrapSystemErrorf(err, "failed to reload route")
@@ -226,7 +205,7 @@ func (serv *Server) IsInStaticMode() bool {
 
 func (serv *Server) recordTraffic(servName string, success bool) {
 	if nil != serv.trafficStat {
-		Log.Debug("log traffic for %s", servName)
+		conf.Log.Debug("log traffic for %s", servName)
 
 		info := &stat.TraficInfo{
 			ServiceId: servName,
@@ -244,7 +223,7 @@ func (serv *Server) recordTraffic(servName string, success bool) {
 
 // 给路由表中的每个服务重新创建限速器;
 // 在更新过route.yml配置文件时调用
-func (serv *Server) rebuildRateLimiter() {
+func (serv *Server) rebuildRateLimiter(cfg *conf.GateConfig) {
 	serv.rateLimiterMap = NewRateLimiterSyncMap()
 
 	// 创建每个服务的限速器
@@ -253,32 +232,32 @@ func (serv *Server) rebuildRateLimiter() {
 			continue
 		}
 
-		rl := serv.createRateLimiter(info)
+		rl := serv.createRateLimiter(info, cfg)
 		if nil != rl {
 			serv.rateLimiterMap.Put(info.Id, rl)
-			Log.Debugf("done building rateLimiter for %s", info.Id)
+			conf.Log.Debugf("done building rateLimiter for %s", info.Id)
 		}
 	}
 }
 
 // 创建限速器对象
 // 如果配置文件中设置了使用redis, 则创建RedisRateLimiter, 否则创建MemoryRateLimiter
-func (serv *Server) createRateLimiter(info *route.ServiceInfo) throttle.RateLimiter {
-	enableRedis := conf.App.RedisConfig.Enabled
+func (serv *Server) createRateLimiter(info *conf.ServiceInfo, cfg *conf.GateConfig) throttle.RateLimiter {
+	enableRedis := cfg.RedisConfig.Enabled
 	if !enableRedis {
 		return throttle.NewMemoryRateLimiter(info.Qps)
 	}
 
-	client := redis.NewRedisClient(conf.App.RedisConfig.Addr, 5)
+	client := redis.NewRedisClient(cfg.RedisConfig.Addr, 5)
 	err := client.Connect()
 	if nil != err {
-		Log.Warn("failed to create ratelimiter, err = %v", err)
+		conf.Log.Warn("failed to create ratelimiter, err = %v", err)
 		return nil
 	}
 
-	rl, err := throttle.NewRedisRateLimiter(client, conf.App.RedisConfig.RateLimiterLua, info.Qps, info.Id)
+	rl, err := throttle.NewRedisRateLimiter(client, cfg.RedisConfig.RateLimiterLua, info.Qps, info.Id)
 	if nil != err {
-		Log.Warn("failed to create ratelimiter, err = %v", err)
+		conf.Log.Warn("failed to create ratelimiter, err = %v", err)
 		return nil
 	}
 

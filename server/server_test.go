@@ -1,9 +1,10 @@
 package server
 
 import (
-	"github.com/valyala/fasthttp"
 	"testing"
 	"time"
+
+	"github.com/valyala/fasthttp"
 )
 
 func TestIntegration(t *testing.T) {
@@ -30,15 +31,14 @@ func TestIntegration(t *testing.T) {
 		server2.ListenAndServe("0.0.0.0:8081")
 	}()
 
-
 	// 启动gogate
 	InitGogate("gogate-test.yml")
-	gogate, err := NewGatewayServer("localhost", 7000, "route-test.yml", 10)
+	gogate, err := NewGatewayServer(nil, "route-test.yml", "0.0.0.0:8080")
 	if nil != err {
 		t.Fatal(err)
 	}
 	go func() {
-		err := gogate.Start()
+		err := gogate.Start(nil, nil)
 		if nil != err {
 			t.Fatal(err)
 		}
@@ -64,10 +64,7 @@ func TestIntegration(t *testing.T) {
 		t.Error("service 2 failed")
 	}
 
-
 	server1.Shutdown()
 	server2.Shutdown()
 	gogate.Shutdown()
 }
-
-

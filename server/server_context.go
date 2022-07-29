@@ -2,18 +2,18 @@ package server
 
 import (
 	"github.com/valyala/fasthttp"
-	"github.com/wanghongfei/gogate/server/route"
+	"github.com/wanghongfei/gogate/conf"
 	"github.com/wanghongfei/gogate/utils"
 )
 
 // 从请求上下文中取出*ServiceInfo
-func GetServiceInfoFromUserValue(ctx *fasthttp.RequestCtx, key string) (*route.ServiceInfo, bool) {
+func GetServiceInfoFromUserValue(ctx *fasthttp.RequestCtx, key string) (*conf.ServiceInfo, bool) {
 	val := ctx.UserValue(key)
 	if nil == val {
 		return nil, false
 	}
 
-	info, ok := val.(*route.ServiceInfo)
+	info, ok := val.(*conf.ServiceInfo)
 	if !ok {
 		return nil, false
 	}

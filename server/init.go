@@ -7,7 +7,7 @@ import (
 
 func InitGogate(gogateConfigFile string) *conf.GateConfig {
 	cfg := LoadConfig(gogateConfigFile)
-	InitLog()
+	InitLog(cfg)
 
 	return cfg
 }

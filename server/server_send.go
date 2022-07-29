@@ -1,11 +1,12 @@
 package server
 
 import (
+	"strings"
+
+	"github.com/wanghongfei/gogate/conf"
 	. "github.com/wanghongfei/gogate/conf"
 	"github.com/wanghongfei/gogate/discovery"
 	"github.com/wanghongfei/gogate/perr"
-	"github.com/wanghongfei/gogate/server/route"
-	"strings"
 
 	"github.com/valyala/fasthttp"
 	"github.com/wanghongfei/gogate/utils"
@@ -20,7 +21,7 @@ const META_VERSION = "version"
 // error: 错误
 func (serv *Server) sendRequest(ctx *fasthttp.RequestCtx, req *fasthttp.Request) (*fasthttp.Response, string, error) {
 	// 获取服务信息
-	info := ctx.UserValue(ROUTE_INFO).(*route.ServiceInfo)
+	info := ctx.UserValue(ROUTE_INFO).(*conf.ServiceInfo)
 
 	var logRecordName string
 	// 需要从注册列表中查询地址
@@ -90,7 +91,7 @@ func filterWithVersion(instances []*discovery.InstanceInfo, targetVersion string
 	return result
 }
 
-func chooseVersion(canaryInfos []*route.CanaryInfo) string {
+func chooseVersion(canaryInfos []*conf.CanaryInfo) string {
 	if nil == canaryInfos || len(canaryInfos) == 0 {
 		return ""
 	}

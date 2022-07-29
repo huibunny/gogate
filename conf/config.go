@@ -12,10 +12,12 @@ type GateConfig struct {
 	Version string `yaml:"version"`
 
 	ServerConfig *ServerConfig `yaml:"server"`
-	RedisConfig  *RedisConfig  `yaml:"redis"`
+
+	ConsulConfig *ConsulConfig `yaml:"consul"`
+
+	RedisConfig *RedisConfig `yaml:"redis"`
 
 	EurekaConfig *EurekaConfig `yaml:"eureka"`
-	ConsulConfig *ConsulConfig `yaml:"consul"`
 
 	Traffic *TrafficConfig `yaml:"traffic"`
 
@@ -25,28 +27,29 @@ type GateConfig struct {
 		FileLink    string `yaml:"file-link"`
 		Directory   string `yaml:"directory"`
 	} `yaml:"log"`
+
+	Router []*ServiceInfo `yaml:"router"`
 }
 
 type ServerConfig struct {
 	AppName       string `yaml:"appName"`
-	Host          string `yaml:"host"`
-	Port          int    `yaml:"port"`
 	MaxConnection int    `yaml:"maxConnection"`
 	// 请求超时时间, ms
 	Timeout int `yaml:"timeout"`
 }
 
+// Consul -.
+type ConsulConfig struct {
+	CheckApi string `yaml:"checkapi"`
+	Interval string `yaml:"interval"`
+	Timeout  string `yaml:"timeout"`
+}
+
 type EurekaConfig struct {
 	Enable            bool   `yaml:"enable"`
 	ConfigFile        string `yaml:"configFile"`
-	RouteFile         string `yaml:"routeFile"`
 	EvictionDuration  uint   `yaml:"evictionDuration"`
 	HeartbeatInterval int    `yaml:"heartbeatInterval"`
-}
-
-type ConsulConfig struct {
-	Enable  bool   `yaml:"enable"`
-	Address string `yaml:"address"`
 }
 
 type TrafficConfig struct {
@@ -60,7 +63,25 @@ type RedisConfig struct {
 	RateLimiterLua string `yaml:"rateLimiterLua"`
 }
 
-var App *GateConfig
+type ServiceInfo struct {
+	Id          string
+	Prefix      string
+	Host        string
+	Name        string
+	StripPrefix bool `yaml:"strip-prefix"`
+	Qps         int
+
+	Canary []*CanaryInfo
+}
+
+func (info *ServiceInfo) String() string {
+	return "prefix = " + info.Prefix + ", id = " + info.Id + ", host = " + info.Host
+}
+
+type CanaryInfo struct {
+	Meta   string
+	Weight int
+}
 
 func LoadConfig(filename string) *GateConfig {
 	f, err := os.Open(filename)
@@ -84,8 +105,8 @@ func LoadConfig(filename string) *GateConfig {
 	return config
 }
 
-func InitLog() {
-	initRotateLog()
+func InitLog(cfg *GateConfig) {
+	initRotateLog(cfg)
 }
 
 func ValidateGogateConfig(config *GateConfig) error {
@@ -93,26 +114,9 @@ func ValidateGogateConfig(config *GateConfig) error {
 		return errors.New("config is nil")
 	}
 
-	// 检查eureka配置
-	euConfig := config.EurekaConfig
-	if nil == euConfig {
-		return errors.New("eureka config cannot be empty")
-	}
-	if euConfig.ConfigFile == "" || euConfig.RouteFile == "" {
-		return errors.New("eureka or route config file cannot be empty")
-	}
-
 	servCfg := config.ServerConfig
 	if servCfg.AppName == "" {
 		servCfg.AppName = "gogate"
-	}
-
-	if servCfg.Host == "" {
-		servCfg.Host = "127.0.0.1"
-	}
-
-	if servCfg.Port == 0 {
-		servCfg.Port = 8080
 	}
 
 	if servCfg.MaxConnection == 0 {
@@ -136,8 +140,6 @@ func ValidateGogateConfig(config *GateConfig) error {
 			rdConfig.Addr = "127.0.0.1:6379"
 		}
 	}
-
-	App = config
 
 	return nil
 }

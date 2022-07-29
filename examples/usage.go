@@ -2,22 +2,18 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/valyala/fasthttp"
-	"github.com/wanghongfei/gogate/conf"
 	serv "github.com/wanghongfei/gogate/server"
 )
 
 func main() {
+	configFile := "gogate.yml"
 	// 初始化
-	serv.InitGogate("gogate.yml")
+	cfg := serv.InitGogate(configFile)
 
 	// 创建Server
-	server, err := serv.NewGatewayServer(
-		conf.App.ServerConfig.Host,
-		conf.App.ServerConfig.Port,
-		conf.App.EurekaConfig.RouteFile,
-		conf.App.ServerConfig.MaxConnection,
-	)
+	server, err := serv.NewGatewayServer(cfg, configFile, ":8080")
 	if nil != err {
 		fmt.Println(err)
 		return
@@ -43,7 +39,7 @@ func main() {
 	// ******************* 非必须 *************************
 
 	// 启动Server
-	err = server.Start()
+	err = server.Start(cfg, nil)
 	if nil != err {
 		fmt.Println(err)
 		return

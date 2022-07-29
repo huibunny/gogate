@@ -3,13 +3,14 @@ package route
 import (
 	"fmt"
 	"testing"
+
+	"github.com/wanghongfei/gogate/conf"
 )
 
 func TestTrieTree_Search(t *testing.T) {
 	tree := NewTrieTree()
 
-
-	data := &ServiceInfo{}
+	data := &conf.ServiceInfo{}
 	data.Id = "serviceA"
 	tree.PutString("/", data)
 	tree.PutString("abcde", data)

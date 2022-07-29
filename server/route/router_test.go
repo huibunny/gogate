@@ -21,7 +21,7 @@ func TestLoadRoute(t *testing.T) {
 }
 
 func TestRouter_Match(t *testing.T) {
-	r, err := NewRouter("../../route.yml")
+	r, err := NewRouter(nil, "../../route.yml")
 	if nil != err {
 		t.Fatal(err)
 	}
@@ -52,11 +52,10 @@ func TestRouter_Match(t *testing.T) {
 }
 
 func BenchmarkRouter_MatchLong(b *testing.B) {
-	r, err := NewRouter("../../route.yml")
+	r, err := NewRouter(nil, "../../route.yml")
 	if nil != err {
 		b.Fatal(err)
 	}
-
 
 	for ix := 0; ix < b.N; ix++ {
 		r.Match("/order/a/b/c/d/e/f/g")

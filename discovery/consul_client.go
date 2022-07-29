@@ -1,12 +1,13 @@
 package discovery
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/hashicorp/consul/api"
 	"github.com/wanghongfei/gogate/conf"
 	. "github.com/wanghongfei/gogate/conf"
 	"github.com/wanghongfei/gogate/perr"
-	"strconv"
-	"strings"
 )
 
 type ConsulClient struct {
@@ -18,21 +19,11 @@ type ConsulClient struct {
 	// 保存服务地址
 	// key: 服务名:版本号, 版本号为eureka注册信息中的metadata[version]值
 	// val: []*InstanceInfo
-	registryMap 			*InsInfoArrSyncMap
+	registryMap *InsInfoArrSyncMap
 }
 
-
-func NewConsulClient() (Client, error) {
-	cfg := &api.Config{}
-	cfg.Address = conf.App.ConsulConfig.Address
-	cfg.Scheme = "http"
-
-	c, err := api.NewClient(cfg)
-	if nil != err {
-		return nil, perr.WrapSystemErrorf(err, "failed to init consule client")
-	}
-
-	consuleClient := &ConsulClient{client:c}
+func NewConsulClient(c *api.Client) (Client, error) {
+	consuleClient := &ConsulClient{client: c}
 	consuleClient.periodicalRefreshClient = newPeriodicalRefresh(consuleClient)
 
 	return consuleClient, nil
@@ -54,7 +45,6 @@ func (c *ConsulClient) Get(serviceId string) []*InstanceInfo {
 
 	return instance
 }
-
 
 func (c *ConsulClient) QueryServices() ([]*InstanceInfo, error) {
 	servMap, err := c.client.Agent().Services()
@@ -91,8 +81,8 @@ func (c *ConsulClient) QueryServices() ([]*InstanceInfo, error) {
 			instances,
 			&InstanceInfo{
 				ServiceName: strings.ToUpper(servInfo.Service),
-				Addr: servInfo.Address + ":" + strconv.Itoa(servInfo.Port),
-				Meta: servInfo.Meta,
+				Addr:        servInfo.Address + ":" + strconv.Itoa(servInfo.Port),
+				Meta:        servInfo.Meta,
 			},
 		)
 	}
@@ -100,7 +90,7 @@ func (c *ConsulClient) QueryServices() ([]*InstanceInfo, error) {
 	return instances, nil
 }
 
-func (c *ConsulClient) Register() error {
+func (c *ConsulClient) Register(cfg *conf.GateConfig, serviceName, port string) error {
 	return perr.WrapSystemErrorf(nil, "not implement yet")
 }
 

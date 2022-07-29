@@ -2,19 +2,20 @@ package conf
 
 import (
 	"fmt"
-	"github.com/lestrrat-go/file-rotatelogs"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"os"
 	"time"
+
+	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 var Log *zap.SugaredLogger
 
 // 初始化日志库;
 // dependsOn: 配置文件加载
-func initRotateLog() {
-	logConfig := App.Log
+func initRotateLog(cfg *GateConfig) {
+	logConfig := cfg.Log
 
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = timeEncodeFunc
@@ -38,10 +39,10 @@ func initRotateLog() {
 		}
 
 		routateWriter, err := rotatelogs.New(
-			pwd + "/" + logConfig.FilePattern,
+			pwd+"/"+logConfig.FilePattern,
 			rotatelogs.WithLinkName(logConfig.FileLink),
-			rotatelogs.WithMaxAge(24 * time.Hour * 30),
-			rotatelogs.WithRotationTime(24 * time.Hour),
+			rotatelogs.WithMaxAge(24*time.Hour*30),
+			rotatelogs.WithRotationTime(24*time.Hour),
 		)
 
 		if nil != err {

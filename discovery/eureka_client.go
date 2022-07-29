@@ -1,12 +1,13 @@
 package discovery
 
 import (
-	"github.com/wanghongfei/gogate/perr"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/wanghongfei/gogate/perr"
+
 	"github.com/wanghongfei/go-eureka-client/eureka"
-	"github.com/wanghongfei/gogate/conf"
 	. "github.com/wanghongfei/gogate/conf"
 	"github.com/wanghongfei/gogate/utils"
 )
@@ -27,7 +28,7 @@ type EurekaClient struct {
 	// 保存服务地址
 	// key: 服务名:版本号, 版本号为eureka注册信息中的metadata[version]值
 	// val: []*InstanceInfo
-	registryMap 			*InsInfoArrSyncMap
+	registryMap *InsInfoArrSyncMap
 }
 
 func NewEurekaClient(confFile string) (Client, error) {
@@ -36,7 +37,7 @@ func NewEurekaClient(confFile string) (Client, error) {
 		return nil, perr.WrapSystemErrorf(err, "failed to init eureka client")
 	}
 
-	euClient := &EurekaClient{client:c}
+	euClient := &EurekaClient{client: c}
 	euClient.periodicalRefreshClient = newPeriodicalRefresh(euClient)
 
 	return euClient, nil
@@ -58,7 +59,6 @@ func (c *EurekaClient) GetInternalRegistryStore() *InsInfoArrSyncMap {
 func (c *EurekaClient) SetInternalRegistryStore(registry *InsInfoArrSyncMap) {
 	c.registryMap = registry
 }
-
 
 // 查询所有服务
 func (c *EurekaClient) QueryServices() ([]*InstanceInfo, error) {
@@ -89,8 +89,8 @@ func (c *EurekaClient) QueryServices() ([]*InstanceInfo, error) {
 				instances,
 				&InstanceInfo{
 					ServiceName: servName,
-					Addr: addr,
-					Meta: meta,
+					Addr:        addr,
+					Meta:        meta,
 				},
 			)
 		}
@@ -99,38 +99,38 @@ func (c *EurekaClient) QueryServices() ([]*InstanceInfo, error) {
 	return instances, nil
 }
 
-func (c *EurekaClient) Register() error {
+func (c *EurekaClient) Register(cfg *GateConfig, serviceName, port string) error {
 	ip, err := utils.GetFirstNoneLoopIp()
 	if nil != err {
 		return perr.WrapSystemErrorf(err, "failed to get first none loop ip")
 	}
 
-
-	instanceId = ip + ":" + strconv.Itoa(conf.App.ServerConfig.Port)
+	instanceId = strings.Join([]string{ip, port}, ":")
 
 	// 注册
 	Log.Infof("register to eureka as %s", instanceId)
+	intPort, _ := strconv.Atoi(port)
 	gogateApp = eureka.NewInstanceInfo(
 		instanceId,
-		conf.App.ServerConfig.AppName,
+		serviceName,
 		ip,
-		conf.App.ServerConfig.Port,
-		conf.App.EurekaConfig.EvictionDuration,
+		intPort,
+		10,
 		false,
 	)
 	gogateApp.Metadata = &eureka.MetaData{
 		Class: "",
-		Map: map[string]string {"version": conf.App.Version},
+		Map:   map[string]string{"version": cfg.Version},
 	}
 
-	err = c.client.RegisterInstance(conf.App.ServerConfig.AppName, gogateApp)
+	err = c.client.RegisterInstance(serviceName, gogateApp)
 	if nil != err {
 		return perr.WrapSystemErrorf(err, "failed to register to eureka")
 	}
 
 	// 心跳
 	go func() {
-		ticker = time.NewTicker(time.Second * time.Duration(conf.App.EurekaConfig.HeartbeatInterval))
+		ticker = time.NewTicker(time.Second * time.Duration(3))
 		tickerCloseChan = make(chan struct{})
 
 		for {
@@ -177,4 +177,3 @@ func (c *EurekaClient) heartbeat() {
 
 	Log.Info("heartbeat sent")
 }
-

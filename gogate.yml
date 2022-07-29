@@ -1,31 +1,18 @@
 version: 1.0
 
 server:
-  # 向eureka注册自己时使用的服务名
-  appName: gogate
-  host: 0.0.0.0
-  port: 8001
   # gateway最大连接数
   maxConnection: 2000
   # gateway请求后端服务超时时间, 毫秒
   timeout: 3000
 
-# 如果eureka, consul都没有启动, 则进入静态模式, 不访问注册中心
-eureka:
-  enable: true
-  # eureka配置文件名
-  configFile: eureka.json
-  # 路由配置文件名
-  routeFile: route.yml
-  # eureka剔除服务的最大时间限值, 秒
-  evictionDuration: 30
-  # 心跳间隔, 秒
-  heartbeatInterval: 20
-
-consul:
-  enable: false
-  address: 127.0.0.1:8500
-
+consul: 
+  # health check api
+  checkapi: '/healthz'
+  # health check interval, seconds
+  interval: 3
+  # health check timeout, seconds
+  timeout: 5
 
 traffic:
   # 是否开启流量记录功能
@@ -46,3 +33,48 @@ log:
   directory: "logs"
   file-pattern: "logs/gogate.log.%Y-%m-%d"
   file-link: "logs/gogate.log"
+
+router:
+-
+  # eureka中的服务名
+  id: user-service
+  # 以/user开头的请求, 会被转发到user-service服务中
+  prefix: /user
+  # 转发时是否去掉请求前缀, 即/user
+  strip-prefix: true
+  # 设置qps限制, 每秒最多请求数
+  qps: 1
+  # 灰度配置
+  canary:
+  -
+    # 对应eurekai注册信息中元数据(metadata map)中key=version的值
+    meta: "1.0"
+    # 流量比重
+    weight: 3
+  -
+    meta: "2.0"
+    weight: 4
+  -
+    meta: ""
+    weight: 10
+-
+  id: trends-service
+  # 请求路径当匹配多个prefix时, 长的获胜
+  prefix: /trends
+  strip-prefix: false
+  # 设置qps限制, 每秒最多请求数
+  qps: 1
+-
+  id: order-service
+  prefix: /order
+  strip-prefix: false
+-
+  name: img-service
+  # 如果有host, 则不查注册中心直接使用此地址, 多个地址逗号分隔, 不能有空格
+  host: localhost:8081,localhost:8080
+  prefix: /img
+  strip-prefix: true
+-
+  id: engine-service
+  prefix: /engine
+  strip-prefix: true

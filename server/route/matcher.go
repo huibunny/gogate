@@ -1,13 +1,17 @@
 package route
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/wanghongfei/gogate/conf"
+)
 
 type PathMatcher struct {
-	routeMap		map[string]*ServiceInfo
-	routeTrieTree	*TrieTree
+	routeMap      map[string]*conf.ServiceInfo
+	routeTrieTree *TrieTree
 }
 
-func (matcher *PathMatcher) Match(path string) *ServiceInfo {
+func (matcher *PathMatcher) Match(path string) *conf.ServiceInfo {
 	// 如果大于3个token则使用TrieTree匹配提高性能
 	if strings.Count(path, "/") >= 3 {
 		return matcher.matchByTree(path)
@@ -17,11 +21,11 @@ func (matcher *PathMatcher) Match(path string) *ServiceInfo {
 	return matcher.matchByToken(path)
 }
 
-func (matcher *PathMatcher) matchByTree(path string) *ServiceInfo {
+func (matcher *PathMatcher) matchByTree(path string) *conf.ServiceInfo {
 	return matcher.routeTrieTree.SearchFirst(path)
 }
 
-func (matcher *PathMatcher) matchByToken(path string) *ServiceInfo {
+func (matcher *PathMatcher) matchByToken(path string) *conf.ServiceInfo {
 	if !strings.HasSuffix(path, "/") {
 		path = path + "/"
 	}

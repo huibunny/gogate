@@ -1,14 +1,15 @@
 package discovery
 
+import "github.com/wanghongfei/gogate/conf"
 
 // 封装服务实例信息
 type InstanceInfo struct {
-	ServiceName		string
+	ServiceName string
 
 	// 格式为 host:port
-	Addr 			string
+	Addr string
 	// 此实例附加信息
-	Meta 			map[string]string
+	Meta map[string]string
 }
 
 // 服务发现客户端接口
@@ -17,7 +18,7 @@ type Client interface {
 	QueryServices() ([]*InstanceInfo, error)
 
 	// 注册自己
-	Register() error
+	Register(cfg *conf.GateConfig, serviceName, port string) error
 
 	// 取消注册自己
 	UnRegister() error
@@ -34,4 +35,3 @@ type Client interface {
 	// 更新内部保存的注册表
 	SetInternalRegistryStore(*InsInfoArrSyncMap)
 }
-
