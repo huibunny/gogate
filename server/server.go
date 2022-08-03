@@ -31,6 +31,8 @@ type Server struct {
 	//maxWait 				time.Duration
 	//wg      				*sync.WaitGroup
 
+	// for token secret
+	Secret string
 	// for health check
 	checkApi string
 	// URI路由组件
@@ -82,6 +84,7 @@ func NewGatewayServer(cfg *conf.GateConfig, configFile, listenAddr string) (*Ser
 
 		lb: &lb.RoundRobinLoadBalancer{},
 
+		Secret:   cfg.ServerConfig.Secret,
 		checkApi: cfg.ConsulConfig.CheckApi,
 
 		Router: router,

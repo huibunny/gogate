@@ -36,6 +36,8 @@ type ServerConfig struct {
 	MaxConnection int    `yaml:"maxConnection"`
 	// 请求超时时间, ms
 	Timeout int `yaml:"timeout"`
+	// token secret
+	Secret string `yaml:"secret"`
 }
 
 // Consul -.
@@ -70,6 +72,7 @@ type ServiceInfo struct {
 	Name        string
 	StripPrefix bool `yaml:"strip-prefix"`
 	Qps         int
+	Verify      bool `yaml:"verify"`
 
 	Canary []*CanaryInfo
 }

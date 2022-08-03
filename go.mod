@@ -15,8 +15,9 @@ require go.uber.org/zap v1.17.0
 require (
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/fastly/go-utils v0.0.0-20180712184237-d95a45783239 // indirect
+	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/hashicorp/consul/api v1.12.0
-	github.com/huibunny/gocore v0.0.0-20220729073336-a1615ac1a0a8
+	github.com/huibunny/gocore v0.0.0-20220803033418-0dbfa9abb3e7
 	github.com/jehiah/go-strftime v0.0.0-20171201141054-1d33003b3869 // indirect
 	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/lestrrat-go/file-rotatelogs v2.3.0+incompatible

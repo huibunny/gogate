@@ -1,9 +1,9 @@
 package server
 
 import (
-	"bytes"
 	"errors"
 
+	coreutils "github.com/huibunny/gocore/utils"
 	"github.com/valyala/fasthttp"
 	"github.com/wanghongfei/gogate/conf"
 	"github.com/wanghongfei/gogate/utils"
@@ -13,18 +13,19 @@ func VerifyToken(ctx *fasthttp.RequestCtx, secret string) error {
 	// Get the Basic Authentication credentials
 	auth := ctx.Request.Header.Peek("Authorization")
 	strAuth := string(auth)
-	userInfo, err := ParseToken(token, secret)
+	userName, password, expireTime, _, err := coreutils.ParseToken(strAuth, secret)
 	if err != nil {
-		err = errors.New("ParseToken returns error: %v.", err)
+		err = errors.New("ParseToken returns error: " + err.Error())
 	} else {
-		userName := userInfo["username"]
-		password := userInfo["password"]
-		createTime := userInfo["create_time"]
-		tokenExpire := userInfo["token_expire"]
-		if len(userInfo["username"]) > 0 && len(userInfo["password"]) > 0 {
-			//
+		if len(userName) > 0 && len(password) > 0 {
+			now := coreutils.CurrentTime()
+			if expireTime <= now {
+				err = errors.New("token expired")
+			} else {
+				//
+			}
 		} else {
-			//
+			err = errors.New("token failure")
 		}
 	}
 

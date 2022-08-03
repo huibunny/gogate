@@ -5,6 +5,7 @@ server:
   maxConnection: 2000
   # gateway请求后端服务超时时间, 毫秒
   timeout: 3000
+  secret: 'howareyoutoday'
 
 consul: 
   # health check api
@@ -36,27 +37,29 @@ log:
 
 router:
 -
-  # eureka中的服务名
-  id: user-service
-  # 以/user开头的请求, 会被转发到user-service服务中
-  prefix: /user
-  # 转发时是否去掉请求前缀, 即/user
+  # consul中的服务名
+  id: clean
+  # 以/clean开头的请求, 会被转发到clean服务中
+  prefix: /clean
+  # 转发时是否去掉请求前缀, 即/clean
   strip-prefix: true
   # 设置qps限制, 每秒最多请求数
   qps: 1
+  # verify token
+  verify: true
   # 灰度配置
-  canary:
-  -
-    # 对应eurekai注册信息中元数据(metadata map)中key=version的值
-    meta: "1.0"
+  #canary:
+  #-
+  #  # 对应eurekai注册信息中元数据(metadata map)中key=version的值
+  #  meta: "1.0"
     # 流量比重
-    weight: 3
-  -
-    meta: "2.0"
-    weight: 4
-  -
-    meta: ""
-    weight: 10
+  #  weight: 3
+  #-
+  #  meta: "2.0"
+  #  weight: 4
+  #-
+  #  meta: ""
+  # weight: 10
 -
   id: trends-service
   # 请求路径当匹配多个prefix时, 长的获胜
@@ -64,17 +67,25 @@ router:
   strip-prefix: false
   # 设置qps限制, 每秒最多请求数
   qps: 1
+  # verify token
+  verify: true
 -
   id: order-service
   prefix: /order
   strip-prefix: false
+  # verify token
+  verify: true
 -
   name: img-service
   # 如果有host, 则不查注册中心直接使用此地址, 多个地址逗号分隔, 不能有空格
   host: localhost:8081,localhost:8080
   prefix: /img
   strip-prefix: true
+  # verify token
+  verify: true
 -
   id: engine-service
   prefix: /engine
   strip-prefix: true
+  # verify token
+  verify: true
