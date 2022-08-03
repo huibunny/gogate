@@ -73,7 +73,7 @@ func (c *ConsulClient) QueryServices() ([]*InstanceInfo, error) {
 		}
 
 		if !isHealth {
-			Log.Warn("following instance is not health, skip; service name: %v, service id: %v", servName, servId)
+			Log.Warn("following instance is not health, skip; service name: ", servName, ", service id: ", servId)
 			continue
 		}
 

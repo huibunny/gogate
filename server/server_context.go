@@ -13,11 +13,11 @@ func VerifyToken(ctx *fasthttp.RequestCtx, secret string) error {
 	// Get the Basic Authentication credentials
 	auth := ctx.Request.Header.Peek("Authorization")
 	strAuth := string(auth)
-	userName, password, expireTime, _, err := coreutils.ParseToken(strAuth, secret)
+	userID, expireTime, _, err := coreutils.ParseToken(strAuth, secret)
 	if err != nil {
 		err = errors.New("ParseToken returns error: " + err.Error())
 	} else {
-		if len(userName) > 0 && len(password) > 0 {
+		if len(userID) > 0 {
 			now := coreutils.CurrentTime()
 			if expireTime <= now {
 				err = errors.New("token expired")
