@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/hashicorp/consul/api"
 	consulutil "github.com/huibunny/gocore/thirdpart/consul"
@@ -49,14 +51,20 @@ func main() {
 	conf.Log.Infof("pre filters: %v", server.ExportAllPreFilters())
 	conf.Log.Infof("post filters: %v", server.ExportAllPostFilters())
 
-	// 启动服务器
-	err = server.Start(cfg, consulClient)
+	go func() {
+		server.Start(cfg, consulClient)
+	}()
+
+	// Waiting signal
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
+
+	s := <-interrupt
+	conf.Log.Info("app - Run - signal: " + s.String())
+	err = server.Shutdown()
 	checkErrorExit(err, true)
 	conf.Log.Info("listener has been closed")
 
-	// 等待优雅关闭
-	err = server.Shutdown()
-	checkErrorExit(err, false)
 }
 
 func checkErrorExit(err error, exit bool) {

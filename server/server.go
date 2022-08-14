@@ -140,7 +140,7 @@ func (serv *Server) Start(cfg *conf.GateConfig, consulClient *api.Client) error 
 
 	// 是否启用优雅关闭功能
 	//if serv.graceShutdown {
-	//	serv.wg = new(sync.WaitGroup)
+	// serv.wg = new(sync.WaitGroup)
 	//}
 
 	// 保存Listener指针
