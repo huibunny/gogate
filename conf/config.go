@@ -42,9 +42,10 @@ type ServerConfig struct {
 
 // Consul -.
 type ConsulConfig struct {
-	CheckApi string `yaml:"checkapi"`
-	Interval string `yaml:"interval"`
-	Timeout  string `yaml:"timeout"`
+	CheckApi string   `yaml:"check_api"`
+	Interval string   `yaml:"interval"`
+	Timeout  string   `yaml:"timeout"`
+	Tags     []string `yaml:"tags"`
 }
 
 type EurekaConfig struct {
@@ -72,7 +73,8 @@ type ServiceInfo struct {
 	Name        string
 	StripPrefix bool `yaml:"strip-prefix"`
 	Qps         int
-	Verify      bool `yaml:"verify"`
+	Verify      bool     `yaml:"verify"`
+	WhiteList   []string `yaml:"white-list"`
 
 	Canary []*CanaryInfo
 }

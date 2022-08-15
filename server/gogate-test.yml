@@ -9,7 +9,7 @@ server:
 
 consul: 
   # health check api
-  checkapi: '/healthz'
+  check_api: '/healthz'
   # health check interval, seconds
   interval: 3
   # health check timeout, seconds

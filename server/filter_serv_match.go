@@ -19,6 +19,7 @@ func ServiceMatchPreFilter(s *Server, ctx *fasthttp.RequestCtx, newRequest *fast
 			ctx.Response.SetStatusCode(404)
 			NewResponse(ctx.UserValue(REQUEST_PATH).(string), "no match").Send(ctx)
 			return false
+		} else if IsInWhiteList(servInfo, uri) {
 		} else if servInfo.Verify && VerifyToken(ctx, s.Secret) != nil {
 			ctx.Response.SetStatusCode(401)
 			NewResponse(ctx.UserValue(REQUEST_PATH).(string), "token error").Send(ctx)

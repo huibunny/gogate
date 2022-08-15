@@ -5,7 +5,6 @@ go 1.18
 require (
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/hashicorp/consul/api v1.14.0
-	github.com/huibunny/gocore v0.0.0-20220812085521-f3f0d17bd9c2
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible
 	github.com/mediocregopher/radix.v2 v0.0.0-20181115013041-b67df6e626f9
 	github.com/valyala/fasthttp v1.38.0
@@ -13,6 +12,8 @@ require (
 	go.uber.org/zap v1.22.0
 	gopkg.in/yaml.v2 v2.4.0
 )
+
+require github.com/huibunny/gocore v0.0.0-20220815022311-923cd5047423
 
 require (
 	github.com/andybalholm/brotli v1.0.4 // indirect

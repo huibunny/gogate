@@ -10,7 +10,7 @@
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}/main.go",
-            "args": ["-consul", "172.16.12.11:8500", "-folder", "dev", "-name", "cleangateway", "-listen", ":9090"]
+            "args": ["-consul", "dog.ap:8500", "-folder", "dev", "-name", "gateway", "-listen", ":9090"]
         }
     ]
 }

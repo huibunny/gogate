@@ -2,12 +2,26 @@ package server
 
 import (
 	"errors"
+	"strings"
 
 	coreutils "github.com/huibunny/gocore/utils"
 	"github.com/valyala/fasthttp"
 	"github.com/wanghongfei/gogate/conf"
 	"github.com/wanghongfei/gogate/utils"
 )
+
+func IsInWhiteList(servInfo *conf.ServiceInfo, uri string) bool {
+	ret := false
+
+	for _, whiteUri := range servInfo.WhiteList {
+		fullWhiteUri := strings.Join([]string{servInfo.Prefix, whiteUri}, "")
+		if fullWhiteUri == uri {
+			ret = true
+			break
+		}
+	}
+	return ret
+}
 
 func VerifyToken(ctx *fasthttp.RequestCtx, secret string) error {
 	// Get the Basic Authentication credentials

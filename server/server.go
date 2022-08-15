@@ -167,7 +167,7 @@ func (serv *Server) Start(cfg *conf.GateConfig, consulClient *api.Client) error 
 	// the corresponding fasthttp code
 	// serv.fastServ.Handler = func(ctx *fasthttp.RequestCtx) {
 	// 	switch string(ctx.Path()) {
-	// 	case "/healthz":
+	// 	case serv.checkApi:
 	// 		func(ctx *fasthttp.RequestCtx) {
 	// 			conf.Log.Info("receive health check: ", ctx.Request.URI().String(), ".")
 	// 		}(ctx)
