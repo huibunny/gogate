@@ -20,14 +20,18 @@ func ServiceMatchPreFilter(s *Server, ctx *fasthttp.RequestCtx, newRequest *fast
 			NewResponse(ctx.UserValue(REQUEST_PATH).(string), "no match").Send(ctx)
 			return false
 		} else if IsInWhiteList(servInfo, uri) {
-		} else if servInfo.Verify && VerifyToken(ctx, s.Secret) != nil {
-			ctx.Response.SetStatusCode(401)
-			NewResponse(ctx.UserValue(REQUEST_PATH).(string), "token error").Send(ctx)
-			return false
+		} else if servInfo.Verify {
+			user_id, err := VerifyToken(ctx, s.Secret)
+			if err != nil {
+				ctx.Response.SetStatusCode(401)
+				NewResponse(ctx.UserValue(REQUEST_PATH).(string), "token error").Send(ctx)
+				return false
+			}
+			newRequest.Header.Del(AUTHORIZATION)
+			newRequest.Header.Set(USER_ID, user_id)
 		}
 		ctx.SetUserValue(ROUTE_INFO, servInfo)
 		ctx.SetUserValue(SERVICE_NAME, servInfo.Id)
-
 		Log.Debugf("%s matched to %s", uri, servInfo.Id)
 	}
 

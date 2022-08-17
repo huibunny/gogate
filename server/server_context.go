@@ -23,7 +23,7 @@ func IsInWhiteList(servInfo *conf.ServiceInfo, uri string) bool {
 	return ret
 }
 
-func VerifyToken(ctx *fasthttp.RequestCtx, secret string) error {
+func VerifyToken(ctx *fasthttp.RequestCtx, secret string) (string, error) {
 	// Get the Basic Authentication credentials
 	auth := ctx.Request.Header.Peek("Authorization")
 	strAuth := string(auth)
@@ -43,7 +43,7 @@ func VerifyToken(ctx *fasthttp.RequestCtx, secret string) error {
 		}
 	}
 
-	return err
+	return userID, err
 }
 
 // 从请求上下文中取出*ServiceInfo

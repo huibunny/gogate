@@ -11,11 +11,13 @@ import (
 )
 
 const (
-	SERVICE_NAME = "key_service_name"
-	REQUEST_PATH = "key_request_path"
-	ROUTE_INFO   = "key_route_info"
-	REQUEST_ID   = "key_req_id"
-	STOPWATCH    = "key_stopwatch"
+	AUTHORIZATION = "Authorization"
+	USER_ID       = "X-user-id"
+	SERVICE_NAME  = "key_service_name"
+	REQUEST_PATH  = "key_request_path"
+	ROUTE_INFO    = "key_route_info"
+	REQUEST_ID    = "key_req_id"
+	STOPWATCH     = "key_stopwatch"
 
 	RELOAD_PATH = "/_mgr/reload"
 )
