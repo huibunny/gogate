@@ -1,0 +1,15 @@
+- hosts: client
+  user: apple
+  gather_facts: false
+  tasks:
+    - name: Stop remote services by group
+      shell:
+        supervisord ctl -u admin -P zkly stop apigateway:*
+    - name: Copy a src into place
+      copy:
+        src: apigateway
+        dest: /opt/deploy/dev     
+        mode: u+x   
+    - name: Change the working directory before executing the command.
+      shell:
+        supervisord ctl -u admin -P zkly start apigateway:*
